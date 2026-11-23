@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Cita - DentalCare{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9">
+        <div class="card shadow-sm border-0 my-4">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="text-primary"><i class="bi bi-calendar2-check-fill fs-1"></i></div>
+                    <div>
+                        <h3 class="fw-bold mb-0">Confirmación de Reserva</h3>
+                        <p class="text-muted small mb-0">Compruebe los detalles y elija el motivo de su visita</p>
+                    </div>
+                </div>
+
+                <!-- Resumen de fecha y profesional -->
+                <div class="bg-light border rounded-3 p-3 mb-4">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Especialista Dentista:</span>
+                            <strong class="text-primary fs-6">{{ dentista.nombre_completo }}</strong>
+                            <div class="small text-muted">{{ dentista.especialidad }}</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <span class="text-muted small d-block">Fecha y Hora Seleccionadas:</span>
+                            <strong class="text-dark fs-6">{{ fecha_obj|date:"l, d/m/Y" }}</strong>
+                            <div class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ cita_pendiente.hora_inicio }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="id_tratamiento" class="form-label fw-semibold">Tratamiento o Motivo de Consulta *</label>
+                        <select name="tratamiento" id="id_tratamiento" class="form-select" required>
+                            <option value="">-- Seleccione un tratamiento del catálogo --</option>
+                            {% for t in tratamientos %}
+                                <option value="{{ t.id }}">{{ t.nombre }} ({{ t.precio }} € - Aprox. {{ t.duracion_estimada }} min)</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small text-muted">
+                            La duración del tratamiento es orientativa. El doctor podrá ajustarla durante la consulta.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="id_notas" class="form-label fw-semibold">Observaciones adicionales (Opcional)</label>
+                        <textarea name="notas" id="id_notas" rows="3" class="form-control" placeholder="Indique síntomas o detalles relevantes para el equipo médico..."></textarea>
+                    </div>
+
+                    <div class="alert alert-light border py-2 small text-muted mb-4">
+                        <i class="bi bi-info-circle text-primary me-1"></i>
+                        Al pulsar en <strong>Confirmar Cita</strong>, el sistema comprobará en tiempo real que el horario siga disponible y registrará su cita en estado <em>Pendiente</em>.
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'appointments:agenda_publica' %}?dentista={{ dentista.id }}&fecha={{ cita_pendiente.fecha }}" class="btn btn-outline-secondary">
+                            Elegir otro horario
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i>Confirmar Cita Médica
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

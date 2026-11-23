@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Reservar Cita - DentalCare{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 my-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="text-primary"><i class="bi bi-calendar-plus fs-1"></i></div>
+                    <div>
+                        <h3 class="fw-bold mb-0">Reserva de Cita Odontológica</h3>
+                        <p class="text-muted small mb-0">Seleccione el especialista, tratamiento y horario de su preferencia</p>
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small">
+                            {% for error in form.non_field_errors %}
+                                <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Especialista Dentista *</label>
+                            {{ form.dentista }}
+                            {% if form.dentista.errors %}<div class="text-danger small mt-1">{{ form.dentista.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tratamiento *</label>
+                            {{ form.tratamiento }}
+                            {% if form.tratamiento.errors %}<div class="text-danger small mt-1">{{ form.tratamiento.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fecha deseada *</label>
+                            {{ form.fecha }}
+                            {% if form.fecha.errors %}<div class="text-danger small mt-1">{{ form.fecha.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hora de inicio deseada *</label>
+                            {{ form.hora_inicio }}
+                            {% if form.hora_inicio.errors %}<div class="text-danger small mt-1">{{ form.hora_inicio.errors.0 }}</div>{% endif %}
+                            <div class="form-text small text-muted">
+                                La duración inicial se estimará a partir del tratamiento. El dentista podrá ajustarla tras la revisión.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Motivo de consulta / Observaciones</label>
+                        {{ form.notas }}
+                        {% if form.notas.errors %}<div class="text-danger small mt-1">{{ form.notas.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="alert alert-light border py-2 small text-muted mb-4">
+                        <i class="bi bi-info-circle text-primary me-1"></i>
+                        Las reservas son verificadas automáticamente para evitar solapamientos con otras citas y con la disponibilidad del dentista.
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'appointments:mis_citas' %}" class="btn btn-outline-secondary">Volver a mis citas</a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i>Confirmar Solicitud de Cita
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

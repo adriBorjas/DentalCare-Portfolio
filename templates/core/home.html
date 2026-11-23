@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}DentalCare - Cuidado Integral de su Sonrisa{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 rounded-4 bg-dental text-white shadow">
+    <div class="container-fluid py-3">
+        <h1 class="display-5 fw-bold mb-3"><i class="bi bi-heart-pulse-fill me-2"></i>Bienvenido a DentalCare</h1>
+        <p class="col-md-9 fs-5">
+            Su clínica odontológica de confianza. Ofrecemos tratamientos avanzados, atención personalizada
+            y un equipo médico especializado comprometido con la salud y estética de su sonrisa.
+        </p>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            {% if not user.is_authenticated %}
+                <a class="btn btn-light btn-lg px-4 fw-semibold text-primary" href="{% url 'appointments:agenda_publica' %}">
+                    <i class="bi bi-calendar-check me-1"></i>Ver Horarios y Disponibilidad
+                </a>
+                <a class="btn btn-outline-light btn-lg px-4" href="{% url 'accounts:registro' %}">
+                    <i class="bi bi-person-plus me-1"></i>Registrarse como Paciente
+                </a>
+                <a class="btn btn-outline-light btn-lg px-4" href="{% url 'accounts:login' %}">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>Acceso al Sistema
+                </a>
+            {% elif user.es_paciente %}
+                <a class="btn btn-light btn-lg px-4 fw-semibold text-primary" href="{% url 'appointments:reservar_cita' %}">
+                    <i class="bi bi-calendar-plus me-1"></i>Pedir Cita Online
+                </a>
+                <a class="btn btn-outline-light btn-lg px-4" href="{% url 'appointments:mis_citas' %}">
+                    <i class="bi bi-calendar-check me-1"></i>Ver Mis Citas
+                </a>
+            {% elif user.es_dentista %}
+                <a class="btn btn-light btn-lg px-4 fw-semibold text-primary" href="{% url 'appointments:dentista_agenda' %}">
+                    <i class="bi bi-calendar3 me-1"></i>Ir a la Agenda Clínica
+                </a>
+                <a class="btn btn-outline-light btn-lg px-4" href="{% url 'accounts:crear_paciente' %}">
+                    <i class="bi bi-person-plus me-1"></i>Dar de Alta a un Paciente
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 my-2">
+    <div class="col-md-4">
+        <div class="card h-100 p-3 text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-3"><i class="bi bi-shield-check fs-1"></i></div>
+                <h5 class="card-title fw-bold">Atención Personalizada</h5>
+                <p class="card-text text-muted">Cada paciente cuenta con seguimiento detallado y profesionales dedicados a su salud bucodental.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 p-3 text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-3"><i class="bi bi-clock-history fs-1"></i></div>
+                <h5 class="card-title fw-bold">Horarios Flexibles</h5>
+                <p class="card-text text-muted">Consulte la disponibilidad de nuestros dentistas y reserve citas con confirmación inmediata.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 p-3 text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-3"><i class="bi bi-award fs-1"></i></div>
+                <h5 class="card-title fw-bold">Especialistas Cualificados</h5>
+                <p class="card-text text-muted">Odontología general, ortodoncia, endodoncia, estética dental e implantología avanzada.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold mb-0">Nuestros Tratamientos Destacados</h3>
+        <a href="{% url 'treatments:lista' %}" class="btn btn-outline-primary btn-sm">Ver Catálogo Completo &rarr;</a>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for tratamiento in tratamientos %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title fw-bold text-dark mb-0">{{ tratamiento.nombre }}</h5>
+                            <span class="badge bg-primary fs-6">{{ tratamiento.precio }} €</span>
+                        </div>
+                        <p class="card-text text-muted small mt-2">{{ tratamiento.descripcion|default:"Procedimiento odontológico profesional." }}</p>
+                    </div>
+                    <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center text-muted small pb-3">
+                        <span><i class="bi bi-stopwatch me-1"></i>Aprox. {{ tratamiento.duracion_estimada }} min</span>
+                        {% if user.is_authenticated and user.es_paciente %}
+                            <a href="{% url 'appointments:reservar_cita' %}" class="btn btn-sm btn-outline-primary">Reservar</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-muted">Aún no se han publicado tratamientos en el catálogo.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

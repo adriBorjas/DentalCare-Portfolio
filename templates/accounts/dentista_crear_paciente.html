@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Alta de Paciente por Dentista - DentalCare{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 my-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="text-secondary"><i class="bi bi-person-fill-gear fs-1"></i></div>
+                    <div>
+                        <h3 class="fw-bold mb-0">Alta Clínica de Nuevo Paciente</h3>
+                        <p class="text-muted small mb-0">Cree la cuenta del paciente. Se generará una contraseña temporal que deberá cambiar en su primer acceso.</p>
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small">
+                            {% for error in form.non_field_errors %}
+                                <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-person-badge me-2"></i>Datos de Acceso al Portal</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre de usuario *</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}<div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contraseña temporal (Opcional)</label>
+                            {{ form.password_temporal }}
+                            <div class="form-text small text-muted">Deje en blanco para generar una contraseña aleatoria de 8 caracteres.</div>
+                            {% if form.password_temporal.errors %}<div class="text-danger small mt-1">{{ form.password_temporal.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-person-lines-fill me-2"></i>Datos Personales y de Filiación</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre *</label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Apellidos *</label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teléfono móvil *</label>
+                            {{ form.telefono }}
+                            {% if form.telefono.errors %}<div class="text-danger small mt-1">{{ form.telefono.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Correo electrónico</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">DNI/NIE</label>
+                            {{ form.dni }}
+                            {% if form.dni.errors %}<div class="text-danger small mt-1">{{ form.dni.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fecha de Nacimiento</label>
+                            {{ form.fecha_nacimiento }}
+                            {% if form.fecha_nacimiento.errors %}<div class="text-danger small mt-1">{{ form.fecha_nacimiento.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Dirección</label>
+                            {{ form.direccion }}
+                            {% if form.direccion.errors %}<div class="text-danger small mt-1">{{ form.direccion.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'accounts:lista_pacientes' %}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success px-4 py-2 fw-semibold">
+                            <i class="bi bi-person-check-fill me-1"></i>Dar de Alta y Generar Clave Temporal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

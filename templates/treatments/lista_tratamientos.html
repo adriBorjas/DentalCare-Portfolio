@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo de Tratamientos - DentalCare{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-card-checklist text-primary me-2"></i>Tratamientos Odontológicos</h2>
+        <p class="text-muted mb-0">Catálogo de servicios disponibles en DentalCare, precios y duración orientativa</p>
+    </div>
+    {% if es_dentista %}
+        <div>
+            <a href="{% url 'treatments:crear' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Nuevo Tratamiento
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for t in tratamientos %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 {% if not t.activo %}opacity-75 bg-light{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold text-dark mb-0">{{ t.nombre }}</h5>
+                        <span class="badge bg-primary fs-6">{{ t.precio }} €</span>
+                    </div>
+
+                    {% if not t.activo %}
+                        <span class="badge bg-secondary mb-2">Inactivo (No visible para pacientes)</span>
+                    {% endif %}
+
+                    <p class="card-text text-muted small mt-2">
+                        {{ t.descripcion|default:"Procedimiento odontológico realizado por especialistas de DentalCare." }}
+                    </p>
+
+                    <div class="d-flex align-items-center text-muted small mt-3">
+                        <i class="bi bi-stopwatch me-1 text-primary"></i>
+                        <span>Duración orientativa: <strong>{{ t.duracion_estimada }} minutos</strong></span>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white border-0 pt-0 pb-3 d-flex justify-content-between align-items-center">
+                    {% if user.is_authenticated and user.es_paciente %}
+                        <a href="{% url 'appointments:reservar_cita' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-calendar-plus me-1"></i>Reservar Cita
+                        </a>
+                    {% endif %}
+
+                    {% if es_dentista %}
+                        <div class="ms-auto d-flex gap-2">
+                            <a href="{% url 'treatments:editar' t.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil me-1"></i>Editar
+                            </a>
+                            <form method="post" action="{% url 'treatments:toggle_activo' t.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm {% if t.activo %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                                    {% if t.activo %}Desactivar{% else %}Activar{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="card text-center py-5 border-0 shadow-sm">
+                <div class="card-body">
+                    <i class="bi bi-card-checklist fs-1 text-muted d-block mb-3"></i>
+                    <h5 class="fw-semibold">No hay tratamientos disponibles actualmente</h5>
+                    {% if es_dentista %}
+                        <p class="text-muted">Como miembro del equipo odontológico, puede añadir el primer tratamiento al catálogo.</p>
+                        <a href="{% url 'treatments:crear' %}" class="btn btn-primary mt-2">Crear Primer Tratamiento</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Citas - DentalCare{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-calendar2-check-fill text-primary me-2"></i>Mis Citas en DentalCare</h2>
+        <p class="text-muted mb-0">Historial y próximas consultas del paciente: <strong>{{ paciente.nombre_completo }}</strong></p>
+    </div>
+    <div>
+        <a href="{% url 'appointments:reservar_cita' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Reservar Nueva Cita
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Dentista</th>
+                    <th>Tratamiento</th>
+                    <th>Duración</th>
+                    <th>Estado</th>
+                    <th class="text-end">Gestión</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cita in citas %}
+                    <tr>
+                        <td class="fw-semibold">
+                            {{ cita.fecha|date:"l, d/m/Y" }}
+                            {% if cita.fecha == hoy %}
+                                <span class="badge bg-danger ms-1">¡Hoy!</span>
+                            {% elif cita.fecha > hoy %}
+                                <span class="badge bg-info text-dark ms-1">Próxima</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <i class="bi bi-clock me-1 text-muted"></i>
+                            <strong>{{ cita.hora_inicio|time:"H:i" }}</strong> - {{ cita.hora_fin|time:"H:i" }}
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ cita.dentista.nombre_completo }}</div>
+                            <small class="text-muted">{{ cita.dentista.especialidad }}</small>
+                        </td>
+                        <td>
+                            <div>{{ cita.tratamiento.nombre }}</div>
+                            <small class="text-muted">{{ cita.tratamiento.precio }} €</small>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ cita.duracion_minutos }} min</span>
+                        </td>
+                        <td>
+                            {% if cita.estado == 'PENDIENTE' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pendiente</span>
+                            {% elif cita.estado == 'CONFIRMADA' %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Confirmada</span>
+                            {% elif cita.estado == 'COMPLETADA' %}
+                                <span class="badge bg-primary"><i class="bi bi-clipboard2-check me-1"></i>Completada</span>
+                            {% elif cita.estado == 'CANCELADA' %}
+                                <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Cancelada</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ cita.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if cita.estado == 'PENDIENTE' or cita.estado == 'CONFIRMADA' %}
+                                {% if cita.fecha >= hoy %}
+                                    <a href="{% url 'appointments:cancelar_cita_paciente' cita.pk %}" class="btn btn-sm btn-outline-danger" title="Cancelar esta cita">
+                                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">Cita pasada</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i>
+                            <h5>No tiene citas registradas actualmente</h5>
+                            <p class="small">Solicite su primera cita para recibir atención por parte de nuestros especialistas.</p>
+                            <a href="{% url 'appointments:reservar_cita' %}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus-circle me-1"></i>Reservar Mi Primera Cita
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

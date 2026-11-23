@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - DentalCare{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card shadow-sm border-0 my-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="text-primary"><i class="bi bi-calendar-event-fill fs-1"></i></div>
+                    <div>
+                        <h3 class="fw-bold mb-0">{{ titulo }}</h3>
+                        <p class="text-muted small mb-0">Gestión de citas clínicas, pacientes registrados o sin cuenta y control de duración real</p>
+                    </div>
+                </div>
+
+                <form method="post" novalidate id="citaForm">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small">
+                            {% for error in form.non_field_errors %}
+                                <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Selección de Tipo de Paciente -->
+                    <div class="card bg-light border-0 p-3 mb-4">
+                        <label class="form-label fw-bold mb-2">Identificación del Paciente</label>
+                        <div class="d-flex gap-4 mb-3">
+                            {% for radio in form.tipo_paciente %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label fw-semibold" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Paciente registrado -->
+                        <div id="seccion_registrado" class="mb-2">
+                            <label class="form-label fw-semibold">Seleccionar Paciente con Ficha Clínica</label>
+                            {{ form.paciente }}
+                            {% if form.paciente.errors %}<div class="text-danger small mt-1">{{ form.paciente.errors.0 }}</div>{% endif %}
+                            <div class="form-text small">
+                                ¿El paciente no está registrado? Puede <a href="{% url 'accounts:crear_paciente' %}" target="_blank">crear su cuenta aquí</a> o marcar "Paciente Sin Cuenta".
+                            </div>
+                        </div>
+
+                        <!-- Paciente sin cuenta -->
+                        <div id="seccion_invitado" class="row g-2" style="display: none;">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Nombre y Apellidos *</label>
+                                {{ form.paciente_nombre }}
+                                {% if form.paciente_nombre.errors %}<div class="text-danger small mt-1">{{ form.paciente_nombre.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Teléfono *</label>
+                                {{ form.paciente_telefono }}
+                                {% if form.paciente_telefono.errors %}<div class="text-danger small mt-1">{{ form.paciente_telefono.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Correo Electrónico</label>
+                                {{ form.paciente_email }}
+                                {% if form.paciente_email.errors %}<div class="text-danger small mt-1">{{ form.paciente_email.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos Médicos y Horarios -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Dentista Responsable *</label>
+                            {{ form.dentista }}
+                            {% if form.dentista.errors %}<div class="text-danger small mt-1">{{ form.dentista.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tratamiento a Realizar *</label>
+                            {{ form.tratamiento }}
+                            {% if form.tratamiento.errors %}<div class="text-danger small mt-1">{{ form.tratamiento.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha de la Cita *</label>
+                            {{ form.fecha }}
+                            {% if form.fecha.errors %}<div class="text-danger small mt-1">{{ form.fecha.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Hora de Inicio *</label>
+                            {{ form.hora_inicio }}
+                            {% if form.hora_inicio.errors %}<div class="text-danger small mt-1">{{ form.hora_inicio.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Hora de Fin (Duración Real) *</label>
+                            {{ form.hora_fin }}
+                            {% if form.hora_fin.errors %}<div class="text-danger small mt-1">{{ form.hora_fin.errors.0 }}</div>{% endif %}
+                            <div class="form-text small text-muted">El dentista puede definir o ajustar la duración real de la cita.</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Estado de la Cita</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}<div class="text-danger small mt-1">{{ form.estado.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Motivo de Cancelación (si aplica)</label>
+                            {{ form.motivo_cancelacion }}
+                            {% if form.motivo_cancelacion.errors %}<div class="text-danger small mt-1">{{ form.motivo_cancelacion.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notas Clínicas y Observaciones</label>
+                            {{ form.notas }}
+                            {% if form.notas.errors %}<div class="text-danger small mt-1">{{ form.notas.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'appointments:dentista_agenda' %}" class="btn btn-outline-secondary">Volver a la Agenda</a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i>Guardar Cita
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const radios = document.querySelectorAll('input[name="tipo_paciente"]');
+        const seccionRegistrado = document.getElementById('seccion_registrado');
+        const seccionInvitado = document.getElementById('seccion_invitado');
+
+        function actualizarVisibilidad() {
+            let valor = 'REGISTRADO';
+            radios.forEach(r => { if(r.checked) valor = r.value; });
+            if (valor === 'REGISTRADO') {
+                seccionRegistrado.style.display = 'block';
+                seccionInvitado.style.display = 'none';
+            } else {
+                seccionRegistrado.style.display = 'none';
+                seccionInvitado.style.display = 'flex';
+            }
+        }
+
+        radios.forEach(r => r.addEventListener('change', actualizarVisibilidad));
+        actualizarVisibilidad();
+    });
+</script>
+{% endblock %}

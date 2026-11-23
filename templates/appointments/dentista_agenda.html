@@ -1,0 +1,1303 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda Clínica - DentalCare{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos de la Agenda Profesional DentalCare */
+    :root {
+        --grid-hour-height: 56px; /* 1 hora = 56px, 30 min = 28px */
+        --grid-start-hour: 8;
+        --grid-total-minutes: 780; /* 08:00 a 21:00 = 13h = 780m */
+    }
+
+    .agenda-toolbar {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .btn-view-toggle.active {
+        background-color: var(--dc-primary);
+        color: #ffffff;
+        border-color: var(--dc-primary);
+        font-weight: 600;
+    }
+
+    /* Buscador Integrado */
+    .search-box-container {
+        position: relative;
+        min-width: 280px;
+    }
+
+    .search-results-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        max-height: 420px;
+        overflow-y: auto;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        margin-top: 4px;
+        display: none;
+    }
+
+    .search-result-item {
+        padding: 0.65rem 0.9rem;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .search-result-item:hover {
+        background-color: #f0fdf4;
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Cuadrícula Horaria */
+    .agenda-grid-wrapper {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .agenda-grid-container {
+        display: flex;
+        position: relative;
+        overflow-x: auto;
+        min-height: 780px; /* 13h * 56px = 728px */
+        background-color: #ffffff;
+    }
+
+    /* Eje vertical de horas */
+    .time-axis {
+        flex: 0 0 70px;
+        position: sticky;
+        left: 0;
+        background-color: #f8fafc;
+        border-right: 2px solid #e2e8f0;
+        z-index: 20;
+    }
+
+    .time-axis-header {
+        height: 52px;
+        background-color: #f1f5f9;
+        border-bottom: 2px solid #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .time-axis-slot {
+        height: 28px; /* Cada 30 minutos */
+        border-bottom: 1px dashed #e2e8f0;
+        padding-right: 8px;
+        text-align: right;
+        font-size: 0.72rem;
+        color: #64748b;
+        font-weight: 600;
+        line-height: 28px;
+    }
+
+    .time-axis-slot.hour-start {
+        border-bottom: 1px solid #cbd5e1;
+        color: #334155;
+        font-weight: 700;
+    }
+
+    /* Columnas del calendario */
+    .columns-container {
+        display: flex;
+        flex: 1;
+        min-width: 600px;
+    }
+
+    .calendar-column {
+        flex: 1;
+        min-width: 140px;
+        border-right: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .calendar-column:last-child {
+        border-right: none;
+    }
+
+    .column-header {
+        height: 52px;
+        background-color: #f8fafc;
+        border-bottom: 2px solid #cbd5e1;
+        padding: 6px 8px;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 15;
+    }
+
+    .column-header.is-today {
+        background-color: #eff6ff;
+        border-bottom-color: var(--dc-primary);
+    }
+
+    .column-header.is-today .day-title {
+        color: var(--dc-primary);
+        font-weight: 700;
+    }
+
+    .column-body {
+        position: relative;
+        height: 728px; /* 13 horas * 56px */
+        background-color: #ffffff;
+    }
+
+    /* Franjas de 30 minutos dentro de cada columna */
+    .grid-cell-slot {
+        height: 28px;
+        border-bottom: 1px dashed #f1f5f9;
+        transition: background-color 0.1s ease;
+        cursor: pointer;
+    }
+
+    .grid-cell-slot.hour-line {
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .grid-cell-slot:hover {
+        background-color: #f0fdf4 !important;
+    }
+
+    /* Tramas de no disponibilidad y bloqueos */
+    .bg-unworked {
+        background-color: #f8fafc;
+        background-image: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #f8fafc 10px, #f8fafc 20px);
+    }
+
+    .block-slot-overlay {
+        position: absolute;
+        left: 3px;
+        right: 3px;
+        background-color: #fef2f2;
+        background-image: repeating-linear-gradient(45deg, #fee2e2, #fee2e2 8px, #fef2f2 8px, #fef2f2 16px);
+        border: 1px solid #f87171;
+        border-radius: 6px;
+        z-index: 5;
+        padding: 4px 6px;
+        color: #991b1b;
+        font-size: 0.72rem;
+        font-weight: 600;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Tarjetas de Citas Clínicas */
+    .appointment-card {
+        position: absolute;
+        left: 4px;
+        right: 4px;
+        border-radius: 6px;
+        padding: 4px 7px;
+        font-size: 0.75rem;
+        overflow: hidden;
+        z-index: 10;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        border-left: 4px solid;
+    }
+
+    .appointment-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+        z-index: 15;
+    }
+
+    .positioned-overlay { top: 0; height: 0; }
+    .unworked-clinical-overlay { top: 0; height: 728px; z-index: 1; opacity: 0.7; }
+    .agenda-date-input { width: 140px; }
+    .search-clear-button { display: none; }
+    .agenda-state-select { width: auto; min-width: 150px; }
+    .today-badge { font-size: 0.6rem; }
+    .agenda-dentist-name { font-size: 0.68rem; }
+    .agenda-dentist-specialty { font-size: 0.7rem; }
+    .block-time { font-size: 0.65rem; }
+    .appointment-treatment { font-size: 0.7rem; }
+    .appointment-time { font-size: 0.68rem; }
+    .appointment-time-large { font-size: 0.72rem; }
+    .month-count { font-size: 0.65rem; }
+    .offcanvas-cita { width: 380px; max-width: 100%; }
+    .detail-label { font-size: 0.7rem; letter-spacing: 0.5px; }
+    .patient-type-badge { font-size: 0.65rem; }
+    .notes-content { white-space: pre-wrap; }
+    .search-hint { font-size: 0.7rem; }
+    .search-history-note { font-size: 0.75rem; }
+    .search-status-badge { font-size: 0.65rem; }
+    .search-identity { font-size: 0.72rem; }
+    .search-date { font-size: 0.72rem; }
+
+    /* Colores diferenciados por estado */
+    .card-estado-PENDIENTE {
+        background-color: #fffbeb;
+        border-color: #f59e0b;
+        color: #92400e;
+        border-left-color: #d97706;
+    }
+
+    .card-estado-CONFIRMADA {
+        background-color: #ecfdf5;
+        border-color: #10b981;
+        color: #065f46;
+        border-left-color: #059669;
+    }
+
+    .card-estado-COMPLETADA {
+        background-color: #eff6ff;
+        border-color: #3b82f6;
+        color: #1e40af;
+        border-left-color: #2563eb;
+    }
+
+    .card-estado-CANCELADA {
+        background-color: #f8fafc;
+        border: 1px dashed #94a3b8;
+        border-left: 4px dashed #64748b;
+        color: #64748b;
+        opacity: 0.85;
+    }
+
+    .card-estado-ELIMINADA {
+        background-color: #fef2f2;
+        border: 1px dashed #ef4444;
+        border-left: 4px dashed #dc2626;
+        color: #991b1b;
+        opacity: 0.85;
+    }
+
+    /* Resaltado temporal llamativo para el buscador */
+    .cita-resaltada {
+        animation: pulseHighlight 2s infinite alternate ease-in-out;
+        z-index: 30 !important;
+        box-shadow: 0 0 0 4px #facc15, 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+        background-color: #fef08a !important;
+        border-color: #ca8a04 !important;
+    }
+
+    @keyframes pulseHighlight {
+        0% {
+            box-shadow: 0 0 0 2px #facc15, 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        100% {
+            box-shadow: 0 0 0 6px #eab308, 0 10px 20px rgba(234, 179, 8, 0.4);
+        }
+    }
+
+    /* Vista Mensual */
+    .month-calendar-table {
+        table-layout: fixed;
+    }
+
+    .month-calendar-table th {
+        background-color: #f8fafc;
+        text-align: center;
+        padding: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .month-calendar-table td {
+        height: 110px;
+        vertical-align: top;
+        padding: 5px;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        transition: background-color 0.1s;
+    }
+
+    .month-calendar-table td.other-month {
+        background-color: #f8fafc;
+        opacity: 0.55;
+    }
+
+    .month-calendar-table td.is-today {
+        background-color: #f0fdfa;
+        border: 2px solid var(--dc-primary);
+    }
+
+    .month-day-number {
+        font-weight: 700;
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .month-cita-pill {
+        display: block;
+        padding: 2px 4px;
+        font-size: 0.68rem;
+        border-radius: 3px;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-decoration: none;
+        border-left: 3px solid;
+    }
+
+    /* Modal / Tooltip de Cita */
+    .quick-status-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+
+    /* Título del periodo */
+    .agenda-titulo-periodo {
+        font-size: 1.05rem;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* Etiquetas de hora cada 30 minutos */
+    .time-axis-slot.half-hour {
+        border-bottom: 1px dashed #e2e8f0;
+        color: #94a3b8;
+        font-weight: 500;
+        font-size: 0.68rem;
+    }
+
+    @media (max-width: 991px) {
+        .agenda-toolbar .btn-group {
+            flex-wrap: wrap;
+        }
+        .search-box-container {
+            width: 100%;
+            min-width: unset;
+        }
+        .columns-container {
+            min-width: 100%;
+        }
+        .calendar-column {
+            min-width: 180px;
+        }
+    }
+
+    @media (max-width: 575px) {
+        .agenda-titulo-periodo {
+            font-size: 0.95rem;
+        }
+        .btn-view-toggle {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ============================================================== -->
+<!-- CABECERA DE LA AGENDA: ZONAS INDEPENDIENTES, SIN SOLAPAMIENTOS -->
+<!-- ============================================================== -->
+<div class="agenda-toolbar mb-3">
+
+    <!-- FILA 1: Título del período + Botón Nueva Cita -->
+    <div class="row g-2 align-items-center mb-2">
+        <div class="col-12 col-md-8">
+            <h5 class="fw-bold mb-0 text-dark agenda-titulo-periodo">
+                <i class="bi bi-calendar3 text-primary me-2"></i><span id="lblTituloPeriodo">{{ titulo_periodo }}</span>
+            </h5>
+        </div>
+        <div class="col-12 col-md-4 d-flex justify-content-md-end gap-2">
+            <a href="{% url 'appointments:dentista_crear_cita' %}?fecha={{ fecha_ref|date:'Y-m-d' }}" class="btn btn-primary btn-sm px-3 text-nowrap">
+                <i class="bi bi-plus-circle me-1"></i>Nueva Cita
+            </a>
+        </div>
+    </div>
+
+    <hr class="my-2">
+
+    <!-- FILA 2: Navegación de fechas + Selector de vistas + Buscador -->
+    <div class="row g-2 align-items-center flex-wrap">
+
+        <!-- Navegación entre períodos -->
+        <div class="col-auto d-flex align-items-center gap-2 flex-wrap">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Navegar fechas">
+                <a href="?vista={{ vista }}&fecha={{ ant_fecha }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary" title="Período anterior">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <a href="?vista={{ vista }}&fecha={{ hoy|date:'Y-m-d' }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-primary px-3 fw-semibold">Hoy</a>
+                <a href="?vista={{ vista }}&fecha={{ sig_fecha }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary" title="Período siguiente">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+
+            <!-- Selector de fecha directa -->
+            <form method="get" class="d-inline-flex align-items-center">
+                <input type="hidden" name="vista" value="{{ vista }}">
+                {% if filtro_estado %}<input type="hidden" name="estado" value="{{ filtro_estado }}">{% endif %}
+                {% if incluir_historico %}<input type="hidden" name="incluir_historico" value="1">{% endif %}
+                <input type="date" name="fecha" value="{{ fecha_ref|date:'Y-m-d' }}"
+                       class="form-control form-control-sm agenda-date-input" onchange="this.form.submit()">
+            </form>
+        </div>
+
+        <!-- Selector de vistas -->
+        <div class="col-auto">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Selector de vista">
+                <a href="?vista=semana&fecha={{ fecha_ref|date:'Y-m-d' }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary btn-view-toggle {% if vista == 'semana' %}active{% endif %}">
+                    <i class="bi bi-calendar3-week me-1"></i>Semana
+                </a>
+                <a href="?vista=dia&fecha={{ fecha_ref|date:'Y-m-d' }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary btn-view-toggle {% if vista == 'dia' %}active{% endif %}">
+                    <i class="bi bi-calendar-day me-1"></i>Día
+                </a>
+                <a href="?vista=mes&fecha={{ fecha_ref|date:'Y-m-d' }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary btn-view-toggle {% if vista == 'mes' %}active{% endif %}">
+                    <i class="bi bi-calendar3 me-1"></i>Mes
+                </a>
+                <a href="?vista=lista&fecha={{ fecha_ref|date:'Y-m-d' }}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if incluir_historico %}&incluir_historico=1{% endif %}"
+                   class="btn btn-outline-secondary btn-view-toggle {% if vista == 'lista' %}active{% endif %}">
+                    <i class="bi bi-list-ul me-1"></i>Lista
+                </a>
+            </div>
+        </div>
+
+        <!-- Buscador -->
+        <div class="col-12 col-md">
+            <div class="search-box-container">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="agendaSearchInput" class="form-control border-start-0"
+                           placeholder="Buscar por paciente, DNI, tel..." autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" id="btnLimpiarBusqueda"
+                            class="search-clear-button" title="Limpiar búsqueda">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div id="searchResultsDropdown" class="search-results-dropdown shadow"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILA 3: Filtros clínicos y switch de histórico -->
+    <div class="row g-2 mt-2 pt-2 border-top align-items-center">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-3 w-100">
+            <input type="hidden" name="vista" value="{{ vista }}">
+            <input type="hidden" name="fecha" value="{{ fecha_ref|date:'Y-m-d' }}">
+
+            <!-- Filtro Estado -->
+            <div class="d-flex align-items-center gap-1 flex-wrap">
+                <label class="small text-muted fw-semibold mb-0"><i class="bi bi-funnel me-1"></i>Estado:</label>
+                <select name="estado" class="form-select form-select-sm agenda-state-select" onchange="this.form.submit()">
+                    <option value="">-- Todos los estados --</option>
+                    {% for val, label in estados %}
+                        {% if val != 'ELIMINADA' or incluir_historico %}
+                            <option value="{{ val }}" {% if filtro_estado == val %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Switch Histórico -->
+            <div class="form-check form-switch ms-auto mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="switchHistorico"
+                       name="incluir_historico" value="1"
+                       {% if incluir_historico %}checked{% endif %} onchange="this.form.submit()">
+                <label class="form-check-label small fw-semibold text-secondary" for="switchHistorico">
+                    <i class="bi bi-clock-history me-1"></i>Mostrar canceladas y eliminadas (Histórico)
+                </label>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 1. VISTA SEMANAL: CUADRÍCULA CON COLUMNAS POR DÍA / DENTISTA -->
+<!-- ============================================================== -->
+{% if vista == 'semana' %}
+<div class="agenda-grid-wrapper">
+    <div class="agenda-grid-container">
+        <!-- Eje Vertical de Horas (intervalos de 30 minutos) -->
+        <div class="time-axis">
+            <div class="time-axis-header">Hora</div>
+            {% for h in horas_eje %}
+                <div class="time-axis-slot {% if h.minute == 0 %}hour-start{% else %}half-hour{% endif %}">
+                    {{ h|time:"H:i" }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Columnas de la Semana -->
+        <div class="columns-container">
+            {% for dia in dias_semana %}
+                <!-- Si se filtra un dentista o si se muestran todos -->
+                {% for dnt in dentistas_en_agenda %}
+                    <div class="calendar-column">
+                        <!-- Cabecera de la columna (Día + Dentista si hay varios) -->
+                        <div class="column-header {% if dia.es_hoy %}is-today{% endif %}">
+                            <div class="day-title small">
+                                <strong>{{ dia.nombre|slice:":3" }}</strong> {{ dia.fecha|date:"d/m" }}
+                                {% if dia.es_hoy %}<span class="badge bg-primary text-white p-1 today-badge">Hoy</span>{% endif %}
+                            </div>
+                            <div class="text-truncate text-muted agenda-dentist-name" title="{{ dnt.nombre_completo }}">
+                                {{ dnt.nombre_completo }}
+                            </div>
+                        </div>
+
+                        <!-- Cuerpo de la columna con franjas horarias y citas -->
+                        <div class="column-body">
+                            <!-- Franjas horarias de 30 minutos (permite hacer clic para crear cita) -->
+                            {% for h in horas_eje %}
+                                <div class="grid-cell-slot {% if h.minute == 0 %}hour-line{% endif %}"
+                                     data-dentista="{{ dnt.id }}"
+                                     data-fecha="{{ dia.fecha|date:'Y-m-d' }}"
+                                     data-hora="{{ h|time:'H:i' }}"
+                                     title="Clic para agendar cita a las {{ h|time:'H:i' }} con {{ dnt.nombre_completo }}">
+                                </div>
+                            {% endfor %}
+
+                            <!-- Obtener datos de la matriz para este día y dentista -->
+                            {% with celda=matriz_semana|dictsort:dia.fecha %}
+                            {% endwith %}
+
+                            <!-- Bloqueos de Disponibilidad -->
+                            {% for dia_k, dentistas_dict in matriz_semana.items %}
+                                {% if dia_k == dia.fecha %}
+                                    {% for dnt_k, info in dentistas_dict.items %}
+                                        {% if dnt_k == dnt.id %}
+                                            <!-- Si no pasa consulta este día -->
+                                            {% if not info.trabaja_dia %}
+                                                <div class="block-slot-overlay bg-unworked unworked-clinical-overlay" title="El dentista no pasa consulta este día.">
+                                                    <span class="text-muted"><i class="bi bi-moon-stars me-1"></i>Sin consulta programada</span>
+                                                </div>
+                                            {% endif %}
+
+                                            <!-- Bloqueos de disponibilidad específicos -->
+                                            {% for blq in info.bloqueos %}
+                                                <div class="block-slot-overlay positioned-overlay" data-top-px="{{ blq.pos.top_px }}" data-height-px="{{ blq.pos.height_px }}" title="Bloqueo: {{ blq.bloqueo.motivo }}">
+                                                    <i class="bi bi-slash-circle me-1"></i>{{ blq.bloqueo.motivo|truncatechars:25 }}
+                                                    <div class="block-time">{{ blq.bloqueo.hora_inicio|time:"H:i" }} - {{ blq.bloqueo.hora_fin|time:"H:i" }}</div>
+                                                </div>
+                                            {% endfor %}
+
+                                            <!-- Tarjetas de Citas -->
+                                            {% for item in info.citas %}
+                                                <div id="cita-card-{{ item.cita.id }}"
+                                                     class="appointment-card card-estado-{{ item.cita.estado }} {% if highlight_id == item.cita.id|stringformat:'i' %}cita-resaltada{% endif %}"
+                                                     data-top-px="{{ item.pos.top_px }}" data-height-px="{{ item.pos.height_px }}"
+                                                     data-id="{{ item.cita.id }}"
+                                                     title="{{ item.cita.nombre_paciente_display }} | {{ item.cita.tratamiento.nombre }} ({{ item.cita.hora_inicio|time:'H:i' }} - {{ item.cita.hora_fin|time:'H:i' }})">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <strong class="text-truncate">{{ item.cita.nombre_paciente_display }}</strong>
+                                                        <span class="quick-status-badge badge bg-light text-dark border ms-1">{{ item.cita.get_estado_display }}</span>
+                                                    </div>
+                                                    <div class="text-truncate text-secondary appointment-treatment">
+                                                        {{ item.cita.tratamiento.nombre }}
+                                                    </div>
+                                                    <div class="mt-auto fw-bold appointment-time">
+                                                        <i class="bi bi-clock me-1"></i>{{ item.cita.hora_inicio|time:"H:i" }} - {{ item.cita.hora_fin|time:"H:i" }} ({{ item.cita.duracion_minutos }}m)
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 2. VISTA DIARIA: COLUMNAS INDEPENDIENTES POR DENTISTA -->
+<!-- ============================================================== -->
+{% elif vista == 'dia' %}
+<div class="agenda-grid-wrapper">
+    <div class="agenda-grid-container">
+        <!-- Eje Vertical de Horas (intervalos de 30 minutos) -->
+        <div class="time-axis">
+            <div class="time-axis-header">Hora</div>
+            {% for h in horas_eje %}
+                <div class="time-axis-slot {% if h.minute == 0 %}hour-start{% else %}half-hour{% endif %}">
+                    {{ h|time:"H:i" }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Columnas por Dentista -->
+        <div class="columns-container">
+            {% for col in columnas_dentistas %}
+                <div class="calendar-column">
+                    <!-- Cabecera de la columna: Dentista y Especialidad -->
+                    <div class="column-header">
+                        <div class="day-title small fw-bold text-primary">{{ col.dentista.nombre_completo }}</div>
+                        <div class="text-muted small agenda-dentist-specialty">{{ col.dentista.especialidad }}</div>
+                    </div>
+
+                    <div class="column-body">
+                        <!-- Franjas horarias -->
+                        {% for h in horas_eje %}
+                            <div class="grid-cell-slot {% if h.minute == 0 %}hour-line{% endif %}"
+                                 data-dentista="{{ col.dentista.id }}"
+                                 data-fecha="{{ fecha_ref|date:'Y-m-d' }}"
+                                 data-hora="{{ h|time:'H:i' }}"
+                                 title="Clic para crear cita a las {{ h|time:'H:i' }} con {{ col.dentista.nombre_completo }}">
+                            </div>
+                        {% endfor %}
+
+                        <!-- Si no trabaja hoy -->
+                        {% if not col.trabaja_dia %}
+                            <div class="block-slot-overlay bg-unworked unworked-clinical-overlay">
+                                <span class="text-muted"><i class="bi bi-moon-stars me-1"></i>Sin turno de consulta asignado para este día</span>
+                            </div>
+                        {% endif %}
+
+                        <!-- Bloqueos de Disponibilidad -->
+                        {% for blq in col.bloqueos %}
+                            <div class="block-slot-overlay positioned-overlay" data-top-px="{{ blq.pos.top_px }}" data-height-px="{{ blq.pos.height_px }}">
+                                <i class="bi bi-slash-circle me-1"></i><strong>{{ blq.bloqueo.motivo }}</strong>
+                                <div>{{ blq.bloqueo.hora_inicio|time:"H:i" }} - {{ blq.bloqueo.hora_fin|time:"H:i" }}</div>
+                            </div>
+                        {% endfor %}
+
+                        <!-- Citas del Dentista -->
+                        {% for item in col.citas %}
+                            <div id="cita-card-{{ item.cita.id }}"
+                                 class="appointment-card card-estado-{{ item.cita.estado }} {% if highlight_id == item.cita.id|stringformat:'i' %}cita-resaltada{% endif %}"
+                                 data-top-px="{{ item.pos.top_px }}" data-height-px="{{ item.pos.height_px }}"
+                                 data-id="{{ item.cita.id }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <strong class="fs-6">{{ item.cita.nombre_paciente_display }}</strong>
+                                    <span class="quick-status-badge badge bg-light text-dark border">{{ item.cita.get_estado_display }}</span>
+                                </div>
+                                <div class="text-secondary fw-semibold">{{ item.cita.tratamiento.nombre }}</div>
+                                <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ item.cita.telefono_paciente_display }}</div>
+                                <div class="mt-auto fw-bold text-dark appointment-time-large">
+                                    <i class="bi bi-clock me-1"></i>{{ item.cita.hora_inicio|time:"H:i" }} a {{ item.cita.hora_fin|time:"H:i" }} ({{ item.cita.duracion_minutos }} min)
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 3. VISTA MENSUAL: CALENDARIO COMPACTO CON CITAS POR DÍA -->
+<!-- ============================================================== -->
+{% elif vista == 'mes' %}
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table month-calendar-table mb-0">
+            <thead>
+                <tr>
+                    <th>Lunes</th>
+                    <th>Martes</th>
+                    <th>Miércoles</th>
+                    <th>Jueves</th>
+                    <th>Viernes</th>
+                    <th>Sábado</th>
+                    <th>Domingo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for semana in calendario_mes %}
+                    <tr>
+                        {% for dia in semana %}
+                            <td class="{% if not dia.es_mes_actual %}other-month{% endif %} {% if dia.es_hoy %}is-today{% endif %}">
+                                <div class="month-day-number">
+                                    <a href="?vista=dia&fecha={{ dia.fecha|date:'Y-m-d' }}" class="text-decoration-none {% if dia.es_hoy %}badge bg-primary text-white{% else %}text-dark{% endif %}">
+                                        {{ dia.fecha.day }}
+                                    </a>
+                                    {% if dia.total_citas > 0 %}
+                                        <span class="badge bg-light text-secondary border month-count">{{ dia.total_citas }} citas</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="month-citas-list">
+                                    {% for c in dia.citas|slice:":3" %}
+                                        <a href="{% url 'appointments:dentista_editar_cita' c.id %}"
+                                           class="month-cita-pill card-estado-{{ c.estado }} {% if highlight_id == c.id|stringformat:'i' %}cita-resaltada{% endif %}"
+                                           title="{{ c.nombre_paciente_display }} ({{ c.hora_inicio|time:'H:i' }}) - {{ c.dentista.nombre_completo }}">
+                                            <strong>{{ c.hora_inicio|time:"H:i" }}</strong> {{ c.nombre_paciente_display|truncatechars:14 }}
+                                        </a>
+                                    {% endfor %}
+                                    {% if dia.total_citas > 3 %}
+                                        <a href="?vista=dia&fecha={{ dia.fecha|date:'Y-m-d' }}" class="small text-primary text-decoration-none d-block text-center mt-1">
+                                            +{{ dia.total_citas|add:"-3" }} más...
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 4. VISTA LISTA / TABLA ALTERNATIVA (CONSERVA FORMATO TABULAR) -->
+<!-- ============================================================== -->
+{% elif vista == 'lista' %}
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha y Horario</th>
+                    <th>Paciente</th>
+                    <th>Contacto</th>
+                    <th>Dentista</th>
+                    <th>Tratamiento</th>
+                    <th>Duración Real</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cita in citas_lista %}
+                    <tr id="cita-row-{{ cita.id }}" class="{% if highlight_id == cita.id|stringformat:'i' %}cita-resaltada{% endif %} {% if cita.estado == 'CANCELADA' %}table-light text-muted{% endif %}">
+                        <td>
+                            <div class="fw-semibold">{{ cita.fecha|date:"d/m/Y" }}</div>
+                            <small class="text-primary fw-bold">{{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ cita.nombre_paciente_display }}</div>
+                            {% if cita.paciente %}
+                                <span class="badge bg-light text-dark border small">Con ficha</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary small">Sin cuenta</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small"><i class="bi bi-telephone me-1 text-muted"></i>{{ cita.telefono_paciente_display }}</div>
+                            {% if cita.email_paciente_display != '-' %}
+                                <div class="small text-muted"><i class="bi bi-envelope me-1"></i>{{ cita.email_paciente_display }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ cita.dentista.nombre_completo }}</div>
+                            <small class="text-muted">{{ cita.dentista.especialidad }}</small>
+                        </td>
+                        <td>
+                            <div>{{ cita.tratamiento.nombre }}</div>
+                            <small class="text-muted">{{ cita.tratamiento.precio }} €</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ cita.duracion_minutos }} min</span>
+                        </td>
+                        <td>
+                            {% if cita.estado == 'PENDIENTE' %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% elif cita.estado == 'CONFIRMADA' %}
+                                <span class="badge bg-success">Confirmada</span>
+                            {% elif cita.estado == 'COMPLETADA' %}
+                                <span class="badge bg-primary">Completada</span>
+                            {% elif cita.estado == 'CANCELADA' %}
+                                <span class="badge bg-secondary">Cancelada</span>
+                            {% elif cita.estado == 'ELIMINADA' %}
+                                <span class="badge bg-danger">Eliminada</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ cita.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'appointments:dentista_editar_cita' cita.pk %}" class="btn btn-outline-secondary" title="Modificar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if cita.estado == 'PENDIENTE' %}
+                                    <form method="post" action="{% url 'appointments:cambiar_estado_rapido' cita.pk 'CONFIRMADA' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success" title="Confirmar"><i class="bi bi-check-lg"></i></button>
+                                    </form>
+                                {% endif %}
+                                {% if cita.estado == 'CONFIRMADA' %}
+                                    <form method="post" action="{% url 'appointments:cambiar_estado_rapido' cita.pk 'COMPLETADA' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-primary" title="Completar"><i class="bi bi-check2-all"></i></button>
+                                    </form>
+                                {% endif %}
+                                {% if cita.estado != 'CANCELADA' and cita.estado != 'COMPLETADA' and cita.estado != 'ELIMINADA' %}
+                                    <form method="post" action="{% url 'appointments:cambiar_estado_rapido' cita.pk 'CANCELADA' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-warning" title="Cancelar"><i class="bi bi-x-circle"></i></button>
+                                    </form>
+                                {% endif %}
+                                <a href="{% url 'appointments:dentista_eliminar_cita' cita.pk %}" class="btn btn-outline-danger" title="Borrado lógico">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-check fs-1 d-block mb-3 text-secondary"></i>
+                            <h5>No se han encontrado citas con los criterios indicados</h5>
+                            <a href="{% url 'appointments:dentista_crear_cita' %}?fecha={{ fecha_ref|date:'Y-m-d' }}" class="btn btn-primary btn-sm mt-2">
+                                <i class="bi bi-plus-circle me-1"></i>Agendar Nueva Cita
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ============================================================== -->
+<!-- PANEL LATERAL (OFFCANVAS) DE DETALLE DE CITA                  -->
+<!-- Se abre al hacer clic sobre cualquier cita de la agenda       -->
+<!-- ============================================================== -->
+<div class="offcanvas offcanvas-end offcanvas-cita" tabindex="-1" id="offcanvasCita" aria-labelledby="offcanvasCitaLabel">
+    <div class="offcanvas-header bg-light border-bottom">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasCitaLabel">
+            <i class="bi bi-calendar-event text-primary me-2"></i>Detalle de la Cita
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+            <span id="oc-cita-id" class="badge bg-secondary fs-6"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+    </div>
+    <div class="offcanvas-body p-0">
+        <!-- Estado y horario -->
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-white">
+            <span id="oc-estado-badge" class="badge fs-6 px-3 py-2"></span>
+            <span id="oc-horario" class="fw-bold text-primary"></span>
+        </div>
+
+        <!-- Spinner de carga -->
+        <div id="oc-spinner" class="text-center py-5 d-none">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 text-muted small">Cargando datos...</div>
+        </div>
+
+        <!-- Cuerpo de la información -->
+        <div id="oc-body" class="px-3 py-2">
+
+            <!-- Bloque Paciente -->
+            <div class="mb-3 p-3 bg-light rounded border">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <small class="text-muted fw-semibold text-uppercase detail-label">
+                        <i class="bi bi-person me-1"></i>Paciente
+                    </small>
+                    <span id="oc-paciente-tipo" class="badge bg-light text-dark border patient-type-badge"></span>
+                </div>
+                <div id="oc-paciente-nombre" class="fw-bold fs-6 text-dark"></div>
+                <div id="oc-paciente-contacto" class="small text-muted mt-1"></div>
+            </div>
+
+            <!-- Bloque Dentista -->
+            <div class="mb-3">
+                <small class="text-muted fw-semibold text-uppercase detail-label">
+                    <i class="bi bi-person-badge me-1"></i>Dentista Asignado
+                </small>
+                <div id="oc-dentista" class="fw-semibold mt-1"></div>
+                <div id="oc-dentista-especialidad" class="small text-muted"></div>
+            </div>
+
+            <!-- Bloque Tratamiento -->
+            <div class="mb-3">
+                <small class="text-muted fw-semibold text-uppercase detail-label">
+                    <i class="bi bi-clipboard-pulse me-1"></i>Tratamiento
+                </small>
+                <div id="oc-tratamiento" class="fw-semibold mt-1"></div>
+                <div id="oc-tratamiento-info" class="small text-muted"></div>
+            </div>
+
+            <!-- Bloque Fecha y Duración -->
+            <div class="mb-3">
+                <small class="text-muted fw-semibold text-uppercase detail-label">
+                    <i class="bi bi-clock me-1"></i>Fecha y Horario
+                </small>
+                <div id="oc-fecha-horario" class="fw-semibold mt-1"></div>
+            </div>
+
+            <!-- Bloque Notas (si existen) -->
+            <div id="oc-notas-wrapper" class="mb-3 d-none">
+                <small class="text-muted fw-semibold text-uppercase detail-label">
+                    <i class="bi bi-journal-text me-1"></i>Notas Clínicas
+                </small>
+                <div id="oc-notas" class="mt-1 small bg-light rounded p-2 border text-dark notes-content"></div>
+            </div>
+
+            <!-- Bloque Motivo Cancelación (si existe) -->
+            <div id="oc-motivo-wrapper" class="mb-3 d-none">
+                <small class="text-muted fw-semibold text-uppercase detail-label">
+                    <i class="bi bi-x-circle me-1 text-danger"></i>Motivo de Cancelación
+                </small>
+                <div id="oc-motivo" class="mt-1 small bg-danger-subtle rounded p-2 border border-danger-subtle text-danger"></div>
+            </div>
+
+            <!-- Bloque Acciones (solo si puede editar) -->
+            <div id="oc-acciones" class="border-top pt-3 mt-2 d-none">
+                <small class="text-muted fw-semibold text-uppercase d-block mb-2 detail-label">
+                    <i class="bi bi-lightning me-1"></i>Acciones
+                </small>
+                <div class="d-flex flex-wrap gap-2">
+                    <a id="oc-btn-editar" href="#" class="btn btn-primary btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i>Editar Cita
+                    </a>
+                    <a id="oc-btn-confirmar" href="#" class="btn btn-outline-success btn-sm d-none">
+                        <i class="bi bi-check-lg me-1"></i>Confirmar
+                    </a>
+                    <a id="oc-btn-completar" href="#" class="btn btn-outline-primary btn-sm d-none">
+                        <i class="bi bi-check2-all me-1"></i>Completar
+                    </a>
+                    <a id="oc-btn-cancelar" href="#" class="btn btn-outline-warning btn-sm d-none">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                    <a id="oc-btn-eliminar" href="#" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash me-1"></i>Borrado lógico
+                    </a>
+                </div>
+            </div>
+
+            <!-- Modo solo lectura (paciente u otro usuario sin permisos de edición) -->
+            <div id="oc-solo-lectura" class="border-top pt-3 mt-2 d-none">
+                <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">
+                    <i class="bi bi-lock me-1"></i>Modo solo lectura
+                </span>
+            </div>
+
+        </div><!-- /oc-body -->
+    </div><!-- /offcanvas-body -->
+</div><!-- /offcanvas -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Los valores dinámicos de posición llegan como datos y se aplican aquí,
+    // manteniendo los estilos estructurales en la sección CSS de la plantilla.
+    document.querySelectorAll('.positioned-overlay[data-top-px][data-height-px]').forEach(function (element) {
+        element.style.top = `${element.dataset.topPx}px`;
+        element.style.height = `${element.dataset.heightPx}px`;
+    });
+
+    // ============================================================
+    // UTILIDADES: estado → clases de badge Bootstrap
+    // ============================================================
+    const estadoClase = {
+        'PENDIENTE':  'bg-warning text-dark',
+        'CONFIRMADA': 'bg-success text-white',
+        'COMPLETADA': 'bg-primary text-white',
+        'CANCELADA':  'bg-secondary text-white',
+        'ELIMINADA':  'bg-danger text-white',
+    };
+
+    // ============================================================
+    // ABRIR OFFCANVAS CON DATOS DE UNA CITA
+    // ============================================================
+    function abrirDetalleCita(citaId) {
+        const offcanvasEl = document.getElementById('offcanvasCita');
+        const oc = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+
+        // Mostrar spinner mientras carga
+        document.getElementById('oc-spinner').classList.remove('d-none');
+        document.getElementById('oc-body').classList.add('d-none');
+        document.getElementById('oc-cita-id').textContent = '#' + citaId;
+        document.getElementById('oc-estado-badge').textContent = '';
+        document.getElementById('oc-horario').textContent = '';
+        oc.show();
+
+        fetch(`/citas/api/detalle/${citaId}/`)
+            .then(res => {
+                if (!res.ok) throw new Error('Sin permisos o cita no encontrada');
+                return res.json();
+            })
+            .then(d => {
+                rellenarOffcanvas(d);
+                document.getElementById('oc-spinner').classList.add('d-none');
+                document.getElementById('oc-body').classList.remove('d-none');
+            })
+            .catch(err => {
+                document.getElementById('oc-spinner').classList.add('d-none');
+                document.getElementById('oc-body').classList.remove('d-none');
+                document.getElementById('oc-paciente-nombre').textContent = 'No disponible';
+                console.warn('Error al cargar detalle de cita:', err);
+            });
+    }
+
+    function rellenarOffcanvas(d) {
+        // Cabecera
+        const estadoBadge = document.getElementById('oc-estado-badge');
+        estadoBadge.textContent = d.estado_display;
+        estadoBadge.className = 'badge fs-6 px-3 py-2 ' + (estadoClase[d.estado] || 'bg-dark text-white');
+        document.getElementById('oc-horario').textContent = `${d.hora_inicio} - ${d.hora_fin} (${d.duracion_minutos} min)`;
+
+        // Paciente
+        document.getElementById('oc-paciente-nombre').textContent = d.paciente_nombre || '—';
+        document.getElementById('oc-paciente-tipo').textContent = d.es_paciente_registrado ? 'Registrado' : 'Sin cuenta';
+        let contacto = [];
+        if (d.paciente_telefono && d.paciente_telefono !== '-') contacto.push(`☎ ${d.paciente_telefono}`);
+        if (d.paciente_email && d.paciente_email !== '-') contacto.push(`✉ ${d.paciente_email}`);
+        if (d.paciente_dni) contacto.push(`DNI: ${d.paciente_dni}`);
+        document.getElementById('oc-paciente-contacto').textContent = contacto.join('  ·  ');
+
+        // Dentista
+        document.getElementById('oc-dentista').textContent = d.dentista_nombre || '—';
+        document.getElementById('oc-dentista-especialidad').textContent = d.dentista_especialidad || '';
+
+        // Tratamiento
+        document.getElementById('oc-tratamiento').textContent = d.tratamiento_nombre || '—';
+        document.getElementById('oc-tratamiento-info').textContent =
+            `Precio: ${d.tratamiento_precio ? d.tratamiento_precio + ' €' : '—'}  ·  Duración orientativa: ${d.tratamiento_duracion ? d.tratamiento_duracion + ' min' : '—'}`;
+
+        // Fecha y horario
+        document.getElementById('oc-fecha-horario').textContent =
+            `${d.fecha}  ·  ${d.hora_inicio} a ${d.hora_fin}`;
+
+        // Notas clínicas
+        const notasWrapper = document.getElementById('oc-notas-wrapper');
+        if (d.notas && d.notas.trim()) {
+            document.getElementById('oc-notas').textContent = d.notas;
+            notasWrapper.classList.remove('d-none');
+        } else {
+            notasWrapper.classList.add('d-none');
+        }
+
+        // Motivo cancelación
+        const motivoWrapper = document.getElementById('oc-motivo-wrapper');
+        if (d.motivo_cancelacion && d.motivo_cancelacion.trim()) {
+            document.getElementById('oc-motivo').textContent = d.motivo_cancelacion;
+            motivoWrapper.classList.remove('d-none');
+        } else {
+            motivoWrapper.classList.add('d-none');
+        }
+
+        // Acciones
+        const accionesDiv = document.getElementById('oc-acciones');
+        const soloLecturaDiv = document.getElementById('oc-solo-lectura');
+        if (d.puede_editar) {
+            accionesDiv.classList.remove('d-none');
+            soloLecturaDiv.classList.add('d-none');
+            document.getElementById('oc-btn-editar').href = d.url_editar || '#';
+            document.getElementById('oc-btn-eliminar').href = d.url_eliminar || '#';
+
+            // Botones contextuales según estado
+            const btnConfirmar = document.getElementById('oc-btn-confirmar');
+            const btnCompletar = document.getElementById('oc-btn-completar');
+            const btnCancelar  = document.getElementById('oc-btn-cancelar');
+
+            btnConfirmar.href = d.url_confirmar || '#';
+            btnCompletar.href = d.url_completar || '#';
+            btnCancelar.href  = d.url_cancelar  || '#';
+
+            btnConfirmar.classList.toggle('d-none', d.estado !== 'PENDIENTE');
+            btnCompletar.classList.toggle('d-none', d.estado !== 'CONFIRMADA');
+            btnCancelar.classList.toggle('d-none',
+                ['CANCELADA', 'COMPLETADA', 'ELIMINADA'].includes(d.estado));
+        } else {
+            accionesDiv.classList.add('d-none');
+            soloLecturaDiv.classList.remove('d-none');
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 1. CLICK EN TARJETA DE CITA → abrir panel lateral
+    // -------------------------------------------------------------
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.appointment-card');
+        if (card) {
+            e.stopPropagation();
+            const citaId = card.getAttribute('data-id');
+            if (citaId) abrirDetalleCita(citaId);
+        }
+    });
+
+    // -------------------------------------------------------------
+    // 2. CLICK EN FILA DE LISTA → abrir panel lateral
+    // -------------------------------------------------------------
+    document.querySelectorAll('tr[id^="cita-row-"]').forEach(row => {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+            const rowId = this.id.replace('cita-row-', '');
+            if (rowId) abrirDetalleCita(rowId);
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 3. CLICK EN HUECO LIBRE: CREAR CITA CON PRESELECCIÓN
+    // -------------------------------------------------------------
+    const slots = document.querySelectorAll('.grid-cell-slot');
+    slots.forEach(slot => {
+        slot.addEventListener('click', function() {
+            const dentista = this.getAttribute('data-dentista');
+            const fecha = this.getAttribute('data-fecha');
+            const hora = this.getAttribute('data-hora');
+            if (fecha && hora) {
+                window.location.href = `/citas/agenda/nueva/?fecha=${fecha}&hora_inicio=${hora}&dentista=${dentista || ''}`;
+            }
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 4. SCROLL AUTOMÁTICO A CITA RESALTADA
+    // -------------------------------------------------------------
+    const highlightedCard = document.querySelector('.cita-resaltada');
+    if (highlightedCard) {
+        highlightedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // -------------------------------------------------------------
+    // 5. BUSCADOR INTEGRADO DE CITAS
+    // -------------------------------------------------------------
+    const searchInput = document.getElementById('agendaSearchInput');
+    const searchDropdown = document.getElementById('searchResultsDropdown');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+    const switchHistorico = document.getElementById('switchHistorico');
+    let debounceTimer = null;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                btnLimpiar.style.display = 'block';
+            } else {
+                btnLimpiar.style.display = 'none';
+                searchDropdown.style.display = 'none';
+                return;
+            }
+
+            if (query.length < 2) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                ejecutarBusqueda(query);
+            }, 250);
+        });
+
+        btnLimpiar.addEventListener('click', function() {
+            searchInput.value = '';
+            btnLimpiar.style.display = 'none';
+            searchDropdown.style.display = 'none';
+            searchInput.focus();
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                searchDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    function ejecutarBusqueda(query) {
+        const incluirHistorico = switchHistorico && switchHistorico.checked ? '1' : '0';
+        fetch(`/citas/api/buscar/?q=${encodeURIComponent(query)}&incluir_historico=${incluirHistorico}`)
+            .then(res => res.json())
+            .then(data => {
+                renderizarResultadosBusqueda(data.citas, query);
+            })
+            .catch(err => {
+                console.error('Error buscando citas:', err);
+            });
+    }
+
+    function renderizarResultadosBusqueda(citas, query) {
+        if (!citas || citas.length === 0) {
+            searchDropdown.innerHTML = `
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>No se encontraron citas para "<strong>${escapeHtml(query)}</strong>".
+                    ${!switchHistorico.checked ? '<div class="mt-1 text-secondary search-history-note">(Por defecto solo se muestran citas activas. Active "Mostrar canceladas y eliminadas" para incluir histórico).</div>' : ''}
+                </div>
+            `;
+            searchDropdown.style.display = 'block';
+            return;
+        }
+
+        let html = `
+            <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                <span class="small fw-bold text-secondary">${citas.length} resultado(s) encontrado(s):</span>
+                <span class="small text-muted search-hint">Haga clic para navegar y resaltar</span>
+            </div>
+        `;
+
+        citas.forEach(c => {
+            const badgeClass = c.estado === 'CONFIRMADA' ? 'bg-success' :
+                               c.estado === 'PENDIENTE' ? 'bg-warning text-dark' :
+                               c.estado === 'COMPLETADA' ? 'bg-primary' :
+                               c.estado === 'CANCELADA' ? 'bg-secondary' : 'bg-danger';
+
+            const identidadSecundaria = [];
+            if (c.dni_parcial) identidadSecundaria.push(`DNI: ${c.dni_parcial}`);
+            if (c.telefono_parcial) identidadSecundaria.push(`Tel: ${c.telefono_parcial}`);
+            const identidadStr = identidadSecundaria.join(' | ');
+
+            html += `
+                <div class="search-result-item" onclick="window.location.href='${c.url_navegacion}'">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong class="text-dark">${escapeHtml(c.paciente_nombre)}</strong>
+                        <span class="badge ${badgeClass} ms-1 search-status-badge">${c.estado_display}</span>
+                    </div>
+                    ${identidadStr ? `<div class="small text-muted search-identity"><i class="bi bi-shield-check me-1"></i>${identidadStr}</div>` : ''}
+                    <div class="small text-primary fw-semibold mt-1">
+                        <i class="bi bi-calendar3 me-1"></i>${c.fecha_formateada} &nbsp;|&nbsp; <i class="bi bi-clock me-1"></i>${c.hora_inicio} - ${c.hora_fin} (${c.duracion} min)
+                    </div>
+                    <div class="d-flex justify-content-between text-muted mt-1 search-date">
+                        <span><i class="bi bi-person-badge me-1"></i>${escapeHtml(c.dentista)}</span>
+                        <span>${escapeHtml(c.tratamiento)}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        searchDropdown.innerHTML = html;
+        searchDropdown.style.display = 'block';
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[m];
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Horarios y Disponibilidad - DentalCare{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-clock-history text-primary me-2"></i>Horarios y Bloqueos de Disponibilidad</h2>
+        <p class="text-muted mb-0">Gestión de turnos de consulta y bloqueos de agenda para: <strong>{{ dentista.nombre_completo }}</strong></p>
+    </div>
+    {% if user.is_superuser %}
+        <div>
+            <form method="get" class="d-flex gap-2">
+                <select name="dentista_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for d in todos_dentistas %}
+                        <option value="{{ d.id }}" {% if dentista.id == d.id %}selected{% endif %}>{{ d.nombre_completo }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <!-- Columna 1: Horarios Semanales Habituales -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-week text-primary me-2"></i>Horario Semanal de Consulta</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Días y franjas horarias en las que el dentista pasa consulta ordinaria.</p>
+
+                <!-- Listado actual -->
+                <div class="list-group mb-4">
+                    {% for h in horarios %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold text-dark">{{ h.get_dia_semana_display }}:</span>
+                                <span class="text-primary ms-2">{{ h.hora_apertura|time:"H:i" }} - {{ h.hora_cierre|time:"H:i" }}</span>
+                                {% if not h.activo %}
+                                    <span class="badge bg-secondary ms-2">Inactivo</span>
+                                {% endif %}
+                            </div>
+                            <form method="post" action="{% url 'appointments:eliminar_horario' h.pk %}" class="d-inline" onsubmit="return confirm('¿Eliminar este horario?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar franja"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-3 text-muted small">
+                            No se han configurado horarios semanales para este dentista.
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Formulario añadir horario -->
+                <div class="p-3 bg-light rounded border">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Añadir Franja Horaria</h6>
+                    <form method="post" action="{% url 'appointments:crear_horario' %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Día de la semana</label>
+                            {{ horario_form.dia_semana }}
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Hora apertura</label>
+                                {{ horario_form.hora_apertura }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Hora cierre</label>
+                                {{ horario_form.hora_cierre }}
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            {{ horario_form.activo }}
+                            <label class="form-check-label small fw-semibold" for="{{ horario_form.activo.id_for_label }}">
+                                Activo
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Guardar Franja</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna 2: Bloqueos Puntuales de Disponibilidad -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-slash-circle text-danger me-2"></i>Bloqueos de Disponibilidad</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Intervalos específicos en los que el dentista no estará disponible (vacaciones, congresos, cirugías, asuntos propios).</p>
+
+                <!-- Listado de bloqueos futuros -->
+                <div class="list-group mb-4">
+                    {% for b in bloqueos %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark">{{ b.fecha|date:"d/m/Y" }} ({{ b.hora_inicio|time:"H:i" }} - {{ b.hora_fin|time:"H:i" }})</div>
+                                <small class="text-danger"><i class="bi bi-info-circle me-1"></i>{{ b.motivo }}</small>
+                            </div>
+                            <form method="post" action="{% url 'appointments:eliminar_bloqueo' b.pk %}" class="d-inline" onsubmit="return confirm('¿Desbloquear esta fecha y horario?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar bloqueo"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-3 text-muted small">
+                            No hay bloqueos activos programados.
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Formulario añadir bloqueo -->
+                <div class="p-3 bg-light rounded border">
+                    <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-plus-circle me-1"></i>Programar Nuevo Bloqueo</h6>
+                    <form method="post" action="{% url 'appointments:crear_bloqueo' %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Fecha a bloquear</label>
+                            {{ bloqueo_form.fecha }}
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Hora de inicio</label>
+                                {{ bloqueo_form.hora_inicio }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Hora de fin</label>
+                                {{ bloqueo_form.hora_fin }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Motivo del bloqueo</label>
+                            {{ bloqueo_form.motivo }}
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-danger w-100">Registrar Bloqueo de Agenda</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
