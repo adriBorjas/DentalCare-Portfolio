@@ -2,6 +2,8 @@
 
 Aplicación Django para gestionar una clínica dental: usuarios con roles, pacientes, tratamientos, agenda clínica y reservas públicas.
 
+> **Estado del proyecto:** Este repositorio es una copia independiente destinada exclusivamente a mostrar el proyecto en mi portfolio. **No representa una versión definitiva ni un producto terminado**: sigo trabajando en DentalCare y el desarrollo continúa, por lo que las funcionalidades y el código pueden cambiar. Se trata de un proyecto académico/de aprendizaje y no debe utilizarse en una clínica real ni en producción.
+
 ## Instalación local
 
 Requiere Python 3.12 o superior. Las dependencias están en `requirements.txt`.
@@ -50,7 +52,6 @@ python manage.py test
 - `treatments`: catálogo de tratamientos.
 - `core`: páginas generales y comando de datos demo.
 - `templates`: plantillas HTML.
-- `static`: recursos estáticos.
 
 ## Configuración segura
 
@@ -58,6 +59,6 @@ No subas archivos `.env`, bases de datos locales ni secretos. `.env.example` es 
 
 ### `SECRET_KEY` y base de datos demo
 
-`SECRET_KEY` es una credencial criptográfica de Django: se utiliza para firmar sesiones, cookies y otros tokens. No es un dato de la base de datos ni un valor que deba compartirse en un portfolio. La clave antigua se considera comprometida y cada instalación real debe definir una nueva mediante `DJANGO_SECRET_KEY`.
+`SECRET_KEY` es una credencial criptográfica de Django: se utiliza para firmar sesiones, cookies y otros tokens. No es un dato de la base de datos ni un valor que deba compartirse en un portfolio. La clave antigua se considera comprometida y cada instalación debe definir una nueva mediante `DJANGO_SECRET_KEY`.
 
-La base `portfolio_demo.sqlite3` es únicamente una base local de demostración, no se versiona y está excluida por `.gitignore`. Sus registros son ficticios y se pueden regenerar con `migrate` y `poblar_datos`.
+La base SQLite local utiliza `db.sqlite3` por defecto (o la ruta indicada mediante `DJANGO_DB_NAME`). No se versiona y está excluida por `.gitignore`. Sus registros son ficticios y se pueden regenerar con `migrate` y `poblar_datos`.
