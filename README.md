@@ -2,7 +2,7 @@
 
 Aplicación Django para gestionar una clínica dental: usuarios con roles, pacientes, tratamientos, agenda clínica y reservas públicas.
 
-> **Estado del proyecto:** Este repositorio es una copia independiente destinada exclusivamente a mostrar el proyecto en mi portfolio. **No representa una versión definitiva ni un producto terminado**: sigo trabajando en DentalCare y el desarrollo continúa, por lo que las funcionalidades y el código pueden cambiar. Se trata de un proyecto académico/de aprendizaje y no debe utilizarse en una clínica real ni en producción.
+> **Estado del proyecto:** Este repositorio es una copia independiente destinada exclusivamente a mostrar el proyecto en mi portfolio, ya que aún sigo trabajando en DentalCare y el desarrollo continúa, por lo que no es la versión final y terminada de mi proyecto.
 
 ## Instalación local
 
